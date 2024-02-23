@@ -43,7 +43,7 @@ import scala.jdk.FutureConverters.*
   val sink = Sink.foreach(println)
 
   val runnable = source
-    .takeWithin(20.seconds)
+    .takeWithin(5.minutes)
     .log("message")
     .map(a => if (Math.random() > 0.2) throw new RuntimeException("I Fail") else a)
     .log("passed failure")
@@ -70,6 +70,6 @@ import scala.jdk.FutureConverters.*
     println(s"Complete $res")
     system.terminate()
   })
-  Await.ready(runnable, 30.seconds)
+  Await.ready(runnable, 6.minutes)
   println("end")
 }

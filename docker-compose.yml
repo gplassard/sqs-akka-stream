@@ -1,0 +1,27 @@
+services:
+  app:
+    build:
+      context: ./target/docker/stage
+    environment:
+      DD_TRACE_OTEL_ENABLED: true
+      DD_SERVICE: sqs-akka-stream
+      DD_ENV: docker
+      DD_VERSION: 0.0.1
+      DD_AGENT_HOST: datadog-agent
+      AWS_REGION: eu-west-1
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN}
+    depends_on:
+     - datadog-agent
+
+  datadog-agent:
+    container_name: datadog-agent
+    image: "gcr.io/datadoghq/agent:latest"
+    environment:
+      DD_API_KEY: ${DD_API_KEY}
+      DD_SITE: datadoghq.eu
+      DD_APM_ENABLED: true
+      DD_HOSTNAME: docker-desktop
+#      DD_HOSTNAME_TRUST_UTS_NAMESPACE: true
+      DD_APM_NON_LOCAL_TRAFFIC: true
