@@ -3,7 +3,7 @@ package fr.gplassard.sqsakkastream
 import akka.actor.ActorSystem
 import akka.event.Logging.{ErrorLevel, WarningLevel}
 import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
-import akka.stream.{Attributes, Materializer}
+import akka.stream.{ActorAttributes, Attributes, Materializer, Supervision}
 import software.amazon.awssdk.services.sqs.SqsAsyncClient
 import software.amazon.awssdk.services.sqs.model.{DeleteMessageRequest, GetQueueUrlRequest, Message, ReceiveMessageRequest}
 
@@ -32,7 +32,6 @@ import scala.jdk.FutureConverters.*
     }
     .mapConcat(_.messages().asScala)
 
-  val log = Flow[Message].log("message")
 
   val deleteMessage = Flow[Message].mapAsyncUnordered(10) { message =>
     sqsClient
@@ -45,7 +44,9 @@ import scala.jdk.FutureConverters.*
 
   val runnable = source
     .takeWithin(20.seconds)
-    .via(log)
+    .log("message")
+    .map(a => if (Math.random() > 0.2) throw new RuntimeException("I Fail") else a)
+    .log("passed failure")
     .via(deleteMessage)
     .log("first-delete")
     .map(_._2)
@@ -57,6 +58,12 @@ import scala.jdk.FutureConverters.*
       onFinish = WarningLevel,
       onFailure = ErrorLevel
     ))
+    .withAttributes(ActorAttributes.withSupervisionStrategy({
+      error => {
+        println(s"Restarting after $error")
+        Supervision.restart
+      }
+    }))
     .run()
 
   runnable.onComplete(res => {
